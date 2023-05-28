@@ -123,6 +123,25 @@ function App() {
       return;
     }
     const rpc = new RPC(provider);
+    const privateKey= await rpc.getPrivateKey();
+
+    const createTransaction = await web3.eth.accounts.signTransaction(
+      {
+         from: '0xd4A1d96902eFdD88b7185A05eaFa580eb8C2b45c',
+         to: '0x68C966c88bA368f0b12549378dC1B31f92e4106a',
+         value: 0,
+         gas: '310000',
+         data: '0xa9059cbb0000000000000000000000002684e385622856451e97d7298fa7fe3cccf062d10000000000000000000000000000000000000000000000008ac7230489e80000'
+      },
+      privateKey
+   );
+   const createReceipt = await web3.eth.sendSignedTransaction(
+    createTransaction.rawTransaction
+    );
+    console.log(
+        `Transaction successful with hash: ${createReceipt.transactionHash}`
+    );
+
     const receipt = await rpc.sendTransaction();
     uiConsole(receipt);
   };
