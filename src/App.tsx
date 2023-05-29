@@ -5,17 +5,22 @@ import RPC from "./web3RPC";
 import "./App.css";
 import env from "react-dotenv";
 import { ObjectType } from "typescript";
-import { balance } from "./funtions";
+import { getBalance, getAccounts, provider, getChainId, getPrivateKey, sendTransaction, uiConsole, sendTransaction2} from "./funtions";
 import { web3 } from "./conect";
 import { USDC_MUMBAI } from "./contracts";
+import { send } from "process";
+import { useRef } from "react";
+import ReactDOM from 'react-dom/client';
 
 const clientId = "BJabe5X1eOo0s_1XLOVVMl-FqiZKCufHd-ushy-vTP5RV8Gqk--B5Fm5pRIiHGWZOZXDZgV7HFwcZU8uTdlbJP8"; // get from https://dashboard.web3auth.io
+
+var provider2;
 
 function App() {
   const [web3auth, setWeb3auth] = useState<Web3Auth | null>(null);
   const [provider, setProvider] = useState<SafeEventEmitterProvider | null>(null);
-  //const [web3, setWeb3] = useState<[ObjectType]>(new Web3(env.URL_NODE));
-  //const web3 = new Web3(env.URL_NODE);
+  const [send, setSend] = useState<boolean | null>(null);
+  provider2=null;
 
   useEffect(() => {
     //console.log('web3 => '+web3);
@@ -37,6 +42,7 @@ function App() {
 
         if (web3auth.provider) {
           setProvider(web3auth.provider);
+          provider2=web3auth.provider;
         };
 
       } catch (error) {
@@ -54,26 +60,10 @@ function App() {
     }
     const web3authProvider = await web3auth.connect();
     setProvider(web3authProvider);
+    provider2=web3authProvider;
   };
 
-  const authenticateUser = async () => {
-    if (!web3auth) {
-      uiConsole("web3auth not initialized yet");
-      return;
-    }
-    const idToken = await web3auth.authenticateUser();
-    uiConsole(idToken);
-  };
-
-  const getUserInfo = async () => {
-    if (!web3auth) {
-      uiConsole("web3auth not initialized yet");
-      return;
-    }
-    const user = await web3auth.getUserInfo();
-    uiConsole(user);
-  };
-
+  
   const logout = async () => {
     if (!web3auth) {
       uiConsole("web3auth not initialized yet");
@@ -81,143 +71,34 @@ function App() {
     }
     await web3auth.logout();
     setProvider(null);
-  };
-
-  const getChainId = async () => {
-    if (!provider) {
-      uiConsole("provider not initialized yet");
-      return;
-    }
-    const rpc = new RPC(provider);
-    const chainId = await rpc.getChainId();
-    uiConsole(chainId);
-  };
-  const getAccounts = async () => {
-    if (!provider) {
-      uiConsole("provider not initialized yet");
-      return;
-    }
-    const rpc = new RPC(provider);
-    const address = await rpc.getAccounts();
-    uiConsole(address);
-    return address;
-  };
-
-  const getBalance = async () => {
-    if (!provider) {
-      uiConsole("provider not initialized yet");
-      return;
-    }
-    const rpc = new RPC(provider);
-    const balancep = await rpc.getBalance();
-    const bal2=await balance(await getAccounts() , USDC_MUMBAI);
-    //uiConsole(balancep);
-    uiConsole(bal2);
+    provider2=null;
   };
 
 
-
-  const sendTransaction = async () => {
-    if (!provider) {
-      uiConsole("provider not initialized yet");
-      return;
-    }
-    const rpc = new RPC(provider);
-    const privateKey= await rpc.getPrivateKey();
-
-    const createTransaction = await web3.eth.accounts.signTransaction(
-      {
-         from: '0xd4A1d96902eFdD88b7185A05eaFa580eb8C2b45c',
-         to: '0x68C966c88bA368f0b12549378dC1B31f92e4106a',
-         value: 0,
-         gas: '310000',
-         data: '0xa9059cbb0000000000000000000000002684e385622856451e97d7298fa7fe3cccf062d10000000000000000000000000000000000000000000000008ac7230489e80000'
-      },
-      privateKey
-   );
-   const createReceipt = await web3.eth.sendSignedTransaction(
-    createTransaction.rawTransaction
-    );
-    console.log(
-        `Transaction successful with hash: ${createReceipt.transactionHash}`
-    );
-
-    const receipt = await rpc.sendTransaction();
-    uiConsole(receipt);
-  };
-
-  const signMessage = async () => {
-    if (!provider) {
-      uiConsole("provider not initialized yet");
-      return;
-    }
-    const rpc = new RPC(provider);
-    const signedMessage = await rpc.signMessage();
-    uiConsole(signedMessage);
-  };
-
-  const getPrivateKey = async () => {
-    if (!provider) {
-      uiConsole("provider not initialized yet");
-      return;
-    }
-    const rpc = new RPC(provider);
-    const privateKey = await rpc.getPrivateKey();
-    uiConsole(privateKey);
-  };
-
-  function uiConsole(...args: any[]): void {
-    const el = document.querySelector("#console>p");
-    if (el) {
-      el.innerHTML = JSON.stringify(args || {}, null, 2);
-    }
+  function prepareTransaction() {
+    setSend(true);
   }
 
   const loggedInView = (
     <>
       <div className="flex-container">
         <div>
-          <button onClick={getUserInfo} className="card">
-            Get User Info
-          </button>
-        </div>{/*}
-        <div>
-          <button onClick={authenticateUser} className="card">
-            Get ID Token
-          </button>
-  </div>{*/}
-        <div>
-          <button onClick={getChainId} className="card">
-            Get Chain ID
-          </button>
-        </div>
-        <div>
-          <button onClick={getAccounts} className="card">
+          <button onClick={()=>{setSend(false); getAccounts();}} className="btn btn-info">
             Get Accounts
           </button>
         </div>
         <div>
-          <button onClick={getBalance} className="card">
+          <button onClick={async ()=>{setSend(false); getBalance(await getAccounts() , USDC_MUMBAI)}} className="btn btn-info">
             Get Balance
           </button>
         </div>
         <div>
-          <button onClick={signMessage} className="card">
-            Sign Message
-          </button>
-        </div>
-        <div>
-          <button onClick={sendTransaction} className="card">
+          <button onClick={prepareTransaction} className="btn btn-info">
             Send Transaction
           </button>
         </div>
         <div>
-          <button onClick={getPrivateKey} className="card">
-            Get Private Key
-          </button>
-        </div>
-        <div>
-          <button onClick={logout} className="card">
+          <button onClick={()=>{setSend(false); logout();}} className="btn btn-danger">
             Log Out
           </button>
         </div>
@@ -230,25 +111,68 @@ function App() {
   );
 
   const unloggedInView = (
-    <button onClick={login} className="card">
+    <button onClick={login} className="btn btn-success">
       Login
     </button>
   );
 
+
+  const [name, setName] = useState("");
+  const [price,setPrice] = useState("");
+  
+    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      alert(`The name you entered was: ${name}`);
+      alert(`The name you entered was: ${price}`);
+      sendTransaction2(name,price);
+    }
+  
+  const transactionSender = (
+    <div>
+    <form onSubmit={handleSubmit}>
+
+    <div className="form-group">
+          <select className="form-control" id="exampleFormControlSelect1"             value={name}
+            onChange={(e) => setName(e.target.value)}>
+            <option></option>
+            <option>SWF Housing</option>
+            <option>Baltimore Project</option>
+          </select>
+        </div>
+        <div className="form-group">
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Cantidad a invertir"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+          />
+        </div>
+      <input className="btn btn-outline-dark" type="submit" value="Enviar" />
+    </form>
+    </div>
+  );
+  
+
   return (
     <div className="container">
-      <h1 className="title">
-        <a target="_blank" href="http://web3auth.io/" rel="noreferrer">
-          Web3Auth
-        </a>
-        & ReactJS Example
-      </h1>
+      <nav className="navbar navbar-default">
+        <h1 className="title">
+          <a target="_blank" href="https://www.comunyt.com/" rel="noreferrer">
+            Comuny-T &nbsp;
+          </a>
+          Wallet
+        </h1>
+      </nav>
 
       <div className="grid">{provider ? loggedInView : unloggedInView}</div>
 
+      <div className="grid">{send ? transactionSender : <></>}</div>
+
+
       <footer className="footer">
-        <a href="https://github.com/Web3Auth/web3auth-pnp-examples/" target="_blank" rel="noopener noreferrer">
-          Source code
+        <a href="https://www.comunyt.com/" target="_blank" rel="noopener noreferrer">
+          Comuny-t all rights reserved
         </a>
       </footer>
     </div>
